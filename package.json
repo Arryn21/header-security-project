@@ -1,0 +1,8 @@
+{
+  "name": "secureheaders",
+  "version": "1.0.0",
+  "description": "Free HTTP security header scanner",
+  "engines": {
+    "node": "18.x"
+  }
+}

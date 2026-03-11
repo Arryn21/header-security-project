@@ -1,0 +1,59 @@
+{
+  "name": "SecureHeaders - 02 Config Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-config",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "generate-config-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst serverType = (body.server_type || 'nginx').toLowerCase();\nconst scanData = body.scan_results;\n\n// Build the set of missing headers and their recommended values\nconst fixes = {};\nconst RECOMMENDED = {\n  'content-security-policy': \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';\",\n  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',\n  'x-frame-options': 'DENY',\n  'x-content-type-options': 'nosniff',\n  'referrer-policy': 'strict-origin-when-cross-origin',\n  'permissions-policy': 'accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'\n};\n\nif (scanData && scanData.headers) {\n  for (const h of scanData.headers) {\n    if (!h.present) {\n      fixes[h.key] = RECOMMENDED[h.key];\n    }\n  }\n} else {\n  // If no scan data, generate full config with all recommended headers\n  Object.assign(fixes, RECOMMENDED);\n}\n\nif (Object.keys(fixes).length === 0) {\n  return [{ json: { config: '# All security headers are already present! No changes needed.', server_type: serverType, headers_added: 0 } }];\n}\n\nlet config = '';\n\nif (serverType === 'nginx') {\n  config = '# Add these lines inside your server {} block in nginx.conf\\n\\n';\n  for (const [key, value] of Object.entries(fixes)) {\n    config += `add_header ${key} \"${value}\" always;\\n`;\n  }\n  config += '\\n# Then reload nginx:\\n# sudo nginx -s reload';\n\n} else if (serverType === 'apache') {\n  config = '# Add these lines to your .htaccess or VirtualHost config\\n\\n';\n  config += '<IfModule mod_headers.c>\\n';\n  for (const [key, value] of Object.entries(fixes)) {\n    config += `    Header always set ${key} \"${value}\"\\n`;\n  }\n  config += '</IfModule>\\n';\n  config += '\\n# Then restart Apache:\\n# sudo service apache2 restart';\n\n} else if (serverType === 'vercel') {\n  const headers = Object.entries(fixes).map(([key, value]) => ({ key, value }));\n  const vercelConfig = {\n    headers: [\n      {\n        source: '/(.*)',\n        headers\n      }\n    ]\n  };\n  config = '// Add this to your vercel.json\\n\\n' + JSON.stringify(vercelConfig, null, 2);\n\n} else if (serverType === 'netlify') {\n  config = '# Add this to your netlify/_headers file\\n\\n';\n  config += '/*\\n';\n  for (const [key, value] of Object.entries(fixes)) {\n    config += `  ${key}: ${value}\\n`;\n  }\n\n} else if (serverType === 'cloudflare') {\n  config = '// Cloudflare Worker — add to your worker script\\n\\n';\n  config += 'export default {\\n';\n  config += '  async fetch(request, env) {\\n';\n  config += '    const response = await fetch(request);\\n';\n  config += '    const newHeaders = new Headers(response.headers);\\n';\n  for (const [key, value] of Object.entries(fixes)) {\n    config += `    newHeaders.set('${key}', '${value}');\\n`;\n  }\n  config += '    return new Response(response.body, { status: response.status, headers: newHeaders });\\n';\n  config += '  }\\n';\n  config += '};';\n} else {\n  config = '# Generic HTTP Headers Config\\n\\n';\n  for (const [key, value] of Object.entries(fixes)) {\n    config += `${key}: ${value}\\n`;\n  }\n}\n\nreturn [{\n  json: {\n    server_type: serverType,\n    config,\n    headers_added: Object.keys(fixes).length,\n    headers_list: Object.keys(fixes)\n  }\n}];"
+      },
+      "id": "b1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Generate Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "b1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Generate Config", "type": "main", "index": 0}]]
+    },
+    "Generate Config": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

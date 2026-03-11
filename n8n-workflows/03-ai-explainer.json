@@ -1,0 +1,104 @@
+{
+  "name": "SecureHeaders - 03 AI Explainer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "explain-headers",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "explain-headers-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scan = $input.first().json.body;\nconst url = scan.url || 'unknown';\nconst score = scan.score || 0;\nconst grade = scan.grade || 'F';\nconst headers = scan.headers || [];\n\nconst missingHeaders = headers.filter(h => !h.present);\nconst passingHeaders = headers.filter(h => h.present);\n\nconst missingList = missingHeaders.map(h => `- ${h.header}: ${h.description}`).join('\\n');\nconst passingList = passingHeaders.map(h => `- ${h.header}`).join('\\n');\n\nconst prompt = `You are a cybersecurity expert. Analyze this website's security header scan and give a concise, friendly report.\n\nWebsite: ${url}\nSecurity Score: ${score}/100 (Grade: ${grade})\n\nMISSING headers (security risks):\n${missingList || 'None'}\n\nPRESENT headers (good):\n${passingList || 'None'}\n\nProvide:\n1. A 2-sentence plain-English summary of the security risk level\n2. Top 3 priority fixes (most critical first) with a one-line explanation of WHY each matters\n3. One positive thing if any headers are present\n\nKeep it under 200 words. Be direct and developer-friendly.`;\n\nreturn [{ json: { prompt, url, score, grade } }];"
+      },
+      "id": "c1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "anthropic-version", "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 400,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "c1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Call Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ES2XvDlPmZDqG6t4",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const claudeResponse = $input.first().json;\nconst prevData = $('Build Prompt').first().json;\n\nconst explanation = claudeResponse.content?.[0]?.text || 'Unable to generate explanation.';\n\nreturn [{\n  json: {\n    url: prevData.url,\n    score: prevData.score,\n    grade: prevData.grade,\n    explanation\n  }\n}];"
+      },
+      "id": "c1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Extract Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "id": "c1b2c3d4-0005-0005-0005-000000000005",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Build Prompt", "type": "main", "index": 0}]]
+    },
+    "Build Prompt": {
+      "main": [[{"node": "Call Claude API", "type": "main", "index": 0}]]
+    },
+    "Call Claude API": {
+      "main": [[{"node": "Extract Response", "type": "main", "index": 0}]]
+    },
+    "Extract Response": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

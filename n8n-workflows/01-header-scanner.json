@@ -1,0 +1,134 @@
+{
+  "name": "SecureHeaders - 01 Header Scanner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scan-headers",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "scan-headers-webhook"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.body.url }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Fetch Target URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\n\n// Handle network/connection errors from Fetch Target URL\nif (inputData.error) {\n  const url = $('Webhook').first().json.body.url;\n  return [{\n    json: {\n      url,\n      error: true,\n      errorMessage: 'Could not connect to ' + url + '. The site may be unreachable, blocking automated requests, or the URL may be invalid.',\n      score: null,\n      maxScore: 100,\n      grade: null,\n      scannedAt: new Date().toISOString(),\n      summary: { total: 0, passing: 0, failing: 0 },\n      headers: []\n    }\n  }];\n}\n\nconst headers = inputData.headers || {};\nconst url = $('Webhook').first().json.body.url;\n\nconst SECURITY_HEADERS = {\n  'content-security-policy': {\n    name: 'Content-Security-Policy',\n    weight: 30,\n    description: 'Prevents XSS and code injection attacks',\n    fix: \"Add: Content-Security-Policy: default-src 'self'\"\n  },\n  'strict-transport-security': {\n    name: 'Strict-Transport-Security (HSTS)',\n    weight: 20,\n    description: 'Forces HTTPS connections, prevents downgrade attacks',\n    fix: 'Add: Strict-Transport-Security: max-age=31536000; includeSubDomains'\n  },\n  'x-frame-options': {\n    name: 'X-Frame-Options',\n    weight: 15,\n    description: 'Prevents clickjacking by blocking iframe embedding',\n    fix: 'Add: X-Frame-Options: DENY'\n  },\n  'x-content-type-options': {\n    name: 'X-Content-Type-Options',\n    weight: 15,\n    description: 'Prevents MIME-type sniffing attacks',\n    fix: 'Add: X-Content-Type-Options: nosniff'\n  },\n  'referrer-policy': {\n    name: 'Referrer-Policy',\n    weight: 10,\n    description: 'Controls how much referrer info is shared',\n    fix: 'Add: Referrer-Policy: strict-origin-when-cross-origin'\n  },\n  'permissions-policy': {\n    name: 'Permissions-Policy',\n    weight: 10,\n    description: 'Controls access to browser APIs (camera, mic, GPS)',\n    fix: 'Add: Permissions-Policy: geolocation=(), microphone=(), camera=()'\n  }\n};\n\nconst results = [];\nlet totalScore = 0;\nconst missing = [];\nconst present = [];\n\nfor (const [key, config] of Object.entries(SECURITY_HEADERS)) {\n  const value = headers[key] || null;\n  const isPresent = value !== null;\n  if (isPresent) {\n    totalScore += config.weight;\n    present.push(config.name);\n  } else {\n    missing.push(config.name);\n  }\n  results.push({\n    header: config.name,\n    key,\n    present: isPresent,\n    value: value || null,\n    weight: config.weight,\n    description: config.description,\n    fix: isPresent ? null : config.fix\n  });\n}\n\nconst grade = totalScore >= 90 ? 'A+' : totalScore >= 80 ? 'A' : totalScore >= 70 ? 'B' : totalScore >= 55 ? 'C' : totalScore >= 40 ? 'D' : 'F';\n\nreturn [{\n  json: {\n    url,\n    score: totalScore,\n    maxScore: 100,\n    grade,\n    scannedAt: new Date().toISOString(),\n    summary: {\n      total: results.length,\n      passing: present.length,\n      failing: missing.length\n    },\n    headers: results\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Analyze Headers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Target URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Target URL": {
+      "main": [
+        [
+          {
+            "node": "Analyze Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Headers": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}
