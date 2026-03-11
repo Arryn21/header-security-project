@@ -1,16 +1,10 @@
 {
   "version": 2,
-  "public": true,
+  "outputDirectory": "public",
   "functions": {
     "api/*.js": {
       "memory": 256,
       "maxDuration": 15
     }
-  },
-  "rewrites": [
-    { "source": "/api/scan", "destination": "/api/scan" },
-    { "source": "/api/config", "destination": "/api/config" },
-    { "source": "/api/explain", "destination": "/api/explain" },
-    { "source": "/(.*)", "destination": "/public/$1" }
-  ]
+  }
 }
