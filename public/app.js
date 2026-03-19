@@ -111,8 +111,24 @@
     return { 'A+': 'chip-green', 'A': 'chip-green', 'B': 'chip-lime', 'C': 'chip-yellow', 'D': 'chip-orange', 'F': 'chip-red' }[g] || 'chip-red';
   }
 
+  const COMPLIANCE_URLS = {
+    'OWASP A01:2021': 'https://owasp.org/Top10/A01_2021-Broken_Access_Control/',
+    'OWASP A02:2021': 'https://owasp.org/Top10/A02_2021-Cryptographic_Failures/',
+    'OWASP A03:2021': 'https://owasp.org/Top10/A03_2021-Injection/',
+    'OWASP A05:2021': 'https://owasp.org/Top10/A05_2021-Security_Misconfiguration/',
+    'PCI DSS 4.2.1':  'https://www.pcisecuritystandards.org/document_library/',
+    'PCI DSS 6.4.1':  'https://www.pcisecuritystandards.org/document_library/',
+    'PCI DSS 6.4.3':  'https://www.pcisecuritystandards.org/document_library/',
+    'GDPR Art.25':    'https://gdpr-info.eu/art-25-gdpr/',
+    'GDPR Art.32':    'https://gdpr-info.eu/art-32-gdpr/',
+    'HIPAA §164.312(e)': 'https://www.hhs.gov/hipaa/for-professionals/security/laws-regulations/index.html',
+    'HIPAA §164.514':    'https://www.hhs.gov/hipaa/for-professionals/security/laws-regulations/index.html',
+  };
+
   function complianceTag(tag) {
     const cls = tag.startsWith('OWASP') ? 'ctag-owasp' : tag.startsWith('PCI') ? 'ctag-pci' : tag.startsWith('GDPR') ? 'ctag-gdpr' : 'ctag-hipaa';
+    const url = COMPLIANCE_URLS[tag];
+    if (url) return `<a href="${url}" target="_blank" rel="noopener" class="ctag ${cls}">${tag}</a>`;
     return `<span class="ctag ${cls}">${tag}</span>`;
   }
 
@@ -156,6 +172,12 @@
             ${issueRows || '<div style="font-size:0.8rem;color:var(--green)">No issues found — CSP is well configured.</div>'}
           </div>`;
       }
+      const refsHtml = (h.refs && h.refs.length) ? `
+        <div class="refs-row">
+          <span class="refs-label">Official docs:</span>
+          ${h.refs.map(r => `<a href="${r.url}" target="_blank" rel="noopener" class="ref-link">${r.label}</a>`).join('')}
+        </div>` : '';
+
       return `
         <div class="header-row ${h.present ? 'pass' : 'fail'}">
           <div class="header-info">
@@ -163,9 +185,10 @@
             <div class="header-desc">${h.present ? h.description : h.fix}</div>
             ${h.present && h.value ? `<div class="header-value">${escHtml(h.value)}</div>` : ''}
             ${h.compliance ? `<div class="compliance-row">${h.compliance.map(complianceTag).join('')}</div>` : ''}
+            ${refsHtml}
             ${h.realWorldExample ? `
               <div class="cve-block">
-                <button class="cve-toggle" onclick="toggleCve('cve-${i}')">Real-world attack example</button>
+                <button class="cve-toggle" data-cve-id="cve-${i}">Real-world attack example</button>
                 <div class="cve-text" id="cve-${i}">${escHtml(h.realWorldExample)}</div>
               </div>` : ''}
             ${cspBlock}
@@ -173,13 +196,15 @@
           <span class="badge ${h.present ? 'badge-pass' : 'badge-fail'}">${h.present ? 'PASS' : 'MISSING'}</span>
         </div>`;
     }).join('');
-  }
 
-  function toggleCve(id) {
-    const el = document.getElementById(id);
-    el.classList.toggle('open');
-    const btn = el.previousElementSibling;
-    btn.textContent = el.classList.contains('open') ? 'Hide example' : 'Real-world attack example';
+    // Event delegation for CVE toggles (avoids inline onclick blocked by CSP)
+    list.addEventListener('click', e => {
+      const btn = e.target.closest('.cve-toggle');
+      if (!btn) return;
+      const el = document.getElementById(btn.dataset.cveId);
+      el.classList.toggle('open');
+      btn.textContent = el.classList.contains('open') ? 'Hide example' : 'Real-world attack example';
+    });
   }
 
   function renderLeakage(leaking) {

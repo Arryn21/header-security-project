@@ -4,42 +4,72 @@ const SECURITY_HEADERS = {
     description: 'Prevents XSS and code injection attacks',
     fix: "Add: Content-Security-Policy: default-src 'self'",
     realWorldExample: "British Airways breach (2018): Attackers injected malicious JS that skimmed 500,000 credit cards for 2 weeks. BA was fined £20M. A strict CSP would have blocked the injected script entirely.",
-    compliance: ['OWASP A03:2021', 'PCI DSS 6.4.3', 'GDPR Art.32']
+    compliance: ['OWASP A03:2021', 'PCI DSS 6.4.3', 'GDPR Art.32'],
+    refs: [
+      { label: 'MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP' },
+      { label: 'W3C CSP Level 3', url: 'https://www.w3.org/TR/CSP3/' },
+      { label: 'OWASP CSP Cheat Sheet', url: 'https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html' }
+    ]
   },
   'strict-transport-security': {
     name: 'Strict-Transport-Security (HSTS)', weight: 20,
     description: 'Forces HTTPS connections, prevents downgrade attacks',
     fix: 'Add: Strict-Transport-Security: max-age=31536000; includeSubDomains',
     realWorldExample: "POODLE attack (CVE-2014-3566): Attackers forced browsers to downgrade to SSL 3.0, then decrypted session cookies. HSTS tells browsers to never connect over HTTP, permanently closing this attack vector.",
-    compliance: ['OWASP A02:2021', 'PCI DSS 4.2.1', 'HIPAA §164.312(e)']
+    compliance: ['OWASP A02:2021', 'PCI DSS 4.2.1', 'HIPAA §164.312(e)'],
+    refs: [
+      { label: 'MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security' },
+      { label: 'RFC 6797', url: 'https://datatracker.ietf.org/doc/html/rfc6797' },
+      { label: 'OWASP HSTS Cheat Sheet', url: 'https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Strict_Transport_Security_Cheat_Sheet.html' }
+    ]
   },
   'x-frame-options': {
     name: 'X-Frame-Options', weight: 15,
     description: 'Prevents clickjacking by blocking iframe embedding',
     fix: 'Add: X-Frame-Options: DENY',
     realWorldExample: "Twitter clickjacking (2009, CVE-2009-2238): Attackers embedded Twitter inside invisible iframes. Users clicked what they thought were normal buttons but were actually triggering Twitter actions. X-Frame-Options blocks all iframe embedding.",
-    compliance: ['OWASP A05:2021', 'PCI DSS 6.4.1']
+    compliance: ['OWASP A05:2021', 'PCI DSS 6.4.1'],
+    refs: [
+      { label: 'MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options' },
+      { label: 'RFC 7034', url: 'https://datatracker.ietf.org/doc/html/rfc7034' },
+      { label: 'OWASP Clickjacking', url: 'https://owasp.org/www-community/attacks/Clickjacking' }
+    ]
   },
   'x-content-type-options': {
     name: 'X-Content-Type-Options', weight: 15,
     description: 'Prevents MIME-type sniffing attacks',
     fix: 'Add: X-Content-Type-Options: nosniff',
     realWorldExample: "IE6/7 MIME confusion attacks (CVE-2008-5915): Browsers would execute .jpg files as JavaScript if they contained script content. Attackers uploaded 'images' to CDNs that ran as scripts on victim pages. nosniff forces browsers to respect declared content types.",
-    compliance: ['OWASP A05:2021', 'PCI DSS 6.4.1']
+    compliance: ['OWASP A05:2021', 'PCI DSS 6.4.1'],
+    refs: [
+      { label: 'MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options' },
+      { label: 'OWASP Secure Headers', url: 'https://owasp.org/www-project-secure-headers/#x-content-type-options' },
+      { label: 'WHATWG MIME Sniffing', url: 'https://mimesniff.spec.whatwg.org/' }
+    ]
   },
   'referrer-policy': {
     name: 'Referrer-Policy', weight: 10,
     description: 'Controls how much referrer info is shared',
     fix: 'Add: Referrer-Policy: strict-origin-when-cross-origin',
     realWorldExample: "Healthcare data leakage: Patient portal URLs containing session tokens and medical record IDs were sent in Referer headers to third-party analytics (Google Analytics, Facebook Pixel). Referrer-Policy stops this under HIPAA/GDPR.",
-    compliance: ['GDPR Art.25', 'HIPAA §164.514', 'OWASP A01:2021']
+    compliance: ['GDPR Art.25', 'HIPAA §164.514', 'OWASP A01:2021'],
+    refs: [
+      { label: 'MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy' },
+      { label: 'W3C Referrer Policy', url: 'https://www.w3.org/TR/referrer-policy/' },
+      { label: 'OWASP Transport Layer', url: 'https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html' }
+    ]
   },
   'permissions-policy': {
     name: 'Permissions-Policy', weight: 10,
     description: 'Controls access to browser APIs (camera, mic, GPS)',
     fix: 'Add: Permissions-Policy: geolocation=(), microphone=(), camera=()',
     realWorldExample: "Malicious ad scripts on major news sites were found silently accessing visitor microphones via the browser API. Permissions-Policy locks down all browser API access by default, requiring explicit opt-in per origin.",
-    compliance: ['GDPR Art.25', 'OWASP A05:2021']
+    compliance: ['GDPR Art.25', 'OWASP A05:2021'],
+    refs: [
+      { label: 'MDN Docs', url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy' },
+      { label: 'W3C Permissions Policy', url: 'https://www.w3.org/TR/permissions-policy/' },
+      { label: 'OWASP Secure Headers', url: 'https://owasp.org/www-project-secure-headers/#permissions-policy' }
+    ]
   }
 };
 
