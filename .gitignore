@@ -2,3 +2,4 @@
 AccessTokens.txt
 *.py
 node_modules/
+.claude/

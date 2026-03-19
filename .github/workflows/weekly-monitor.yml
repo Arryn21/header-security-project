@@ -1,0 +1,22 @@
+name: Weekly Security Monitor
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday at 9am UTC
+  workflow_dispatch:       # Allow manual trigger from GitHub UI
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger security header checks
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            "https://secureheaders-scanner.netlify.app/.netlify/functions/monitor" \
+            -H "Content-Type: application/json" \
+            -d "{\"action\":\"check\",\"secret\":\"${{ secrets.MONITOR_SECRET }}\"}")
+
+          echo "Monitor response: $RESPONSE"
+
+          CHECKED=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('checked',0))" 2>/dev/null || echo "unknown")
+          echo "Subscriptions checked: $CHECKED"
