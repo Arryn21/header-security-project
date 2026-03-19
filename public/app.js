@@ -726,7 +726,12 @@ done`;
   }
 
   function shareReport() {
-    if (!currentScan) return;
+    if (!currentScan) {
+      const btn = document.querySelector('.btn-share');
+      btn.textContent = 'Scan first!';
+      setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+      return;
+    }
     const encoded = encodeReport(currentScan);
     const shareUrl = `${location.origin}${location.pathname}#report/${encoded}`;
     const btn = document.querySelector('.btn-share');
