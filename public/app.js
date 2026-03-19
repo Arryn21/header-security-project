@@ -15,7 +15,15 @@
 
   async function runScan() {
     const url = document.getElementById('urlInput').value.trim();
-    if (!url) { alert('Please enter a URL'); return; }
+    if (!url) {
+      document.getElementById('urlInput').style.outline = '2px solid #ef4444';
+      document.getElementById('urlInput').placeholder = 'Please enter a URL first';
+      setTimeout(() => {
+        document.getElementById('urlInput').style.outline = '';
+        document.getElementById('urlInput').placeholder = 'https://yourwebsite.com';
+      }, 2000);
+      return;
+    }
 
     // Normalize URL
     const targetUrl = url.startsWith('http') ? url : 'https://' + url;
@@ -623,7 +631,15 @@ done`;
 
   async function runSubScan() {
     const raw = document.getElementById('urlInput').value.trim();
-    if (!raw) { alert('Please enter a domain first'); return; }
+    if (!raw) {
+      document.getElementById('urlInput').style.outline = '2px solid #ef4444';
+      document.getElementById('urlInput').placeholder = 'Please enter a domain first';
+      setTimeout(() => {
+        document.getElementById('urlInput').style.outline = '';
+        document.getElementById('urlInput').placeholder = 'https://yourwebsite.com';
+      }, 2000);
+      return;
+    }
 
     const domain = raw.replace(/^https?:\/\//, '').split('/')[0];
     const body   = document.getElementById('subscanBody');
