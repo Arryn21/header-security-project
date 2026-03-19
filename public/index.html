@@ -21,13 +21,13 @@
 <div class="scan-box" style="padding: 0 1rem;">
   <div class="scan-input-row">
     <input type="url" id="urlInput" placeholder="https://yourwebsite.com" autocomplete="off" />
-    <button class="btn-scan" id="scanBtn" onclick="runScan()">Scan Now</button>
-    <button class="btn-subscan" id="subScanBtn" onclick="runSubScan()">Subdomains</button>
+    <button class="btn-scan" id="scanBtn">Scan Now</button>
+    <button class="btn-subscan" id="subScanBtn">Subdomains</button>
   </div>
   <p class="scan-examples" style="margin-top:0.6rem;">
-    Try: <a onclick="setUrl('https://github.com')">github.com</a> ·
-         <a onclick="setUrl('https://stripe.com')">stripe.com</a> ·
-         <a onclick="setUrl('https://example.com')">example.com</a>
+    Try: <a href="#" class="url-example" data-url="https://github.com">github.com</a> ·
+         <a href="#" class="url-example" data-url="https://stripe.com">stripe.com</a> ·
+         <a href="#" class="url-example" data-url="https://example.com">example.com</a>
   </p>
 </div>
 
@@ -38,7 +38,7 @@
       <p class="section-title" style="margin-bottom:0.2rem">Subdomain Scan</p>
       <p class="subscan-summary" id="subscanSummary"></p>
     </div>
-    <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.82rem;" onclick="document.getElementById('subscandResults').style.display='none'">Dismiss</button>
+    <button id="dismissBtn" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.82rem;">Dismiss</button>
   </div>
   <div id="subscanBody"></div>
 </div>
@@ -58,7 +58,7 @@
   <div class="shared-banner" id="sharedBanner" style="display:none">
     <span class="shared-banner-icon">🔗</span>
     <div class="shared-banner-text">You're viewing a <strong>shared report</strong> — <span id="sharedBannerMeta"></span></div>
-    <button class="btn-rescan" onclick="newScan()">Scan Again</button>
+    <button class="btn-rescan" id="rescanBtn">Scan Again</button>
   </div>
 
   <!-- Score Card -->
@@ -108,20 +108,20 @@
     <div class="config-header">
       <p class="section-title" style="margin:0">Copy-Paste Fix</p>
       <div class="server-tabs" id="serverTabs">
-        <button class="tab active" onclick="switchTab('nginx', this)">Nginx</button>
-        <button class="tab" onclick="switchTab('apache', this)">Apache</button>
-        <button class="tab" onclick="switchTab('nextjs', this)">Next.js</button>
-        <button class="tab" onclick="switchTab('express', this)">Express</button>
-        <button class="tab" onclick="switchTab('django', this)">Django</button>
-        <button class="tab" onclick="switchTab('laravel', this)">Laravel</button>
-        <button class="tab" onclick="switchTab('vercel', this)">Vercel</button>
-        <button class="tab" onclick="switchTab('netlify', this)">Netlify</button>
-        <button class="tab" onclick="switchTab('cloudflare', this)">Cloudflare</button>
+        <button class="tab active" data-server="nginx">Nginx</button>
+        <button class="tab" data-server="apache">Apache</button>
+        <button class="tab" data-server="nextjs">Next.js</button>
+        <button class="tab" data-server="express">Express</button>
+        <button class="tab" data-server="django">Django</button>
+        <button class="tab" data-server="laravel">Laravel</button>
+        <button class="tab" data-server="vercel">Vercel</button>
+        <button class="tab" data-server="netlify">Netlify</button>
+        <button class="tab" data-server="cloudflare">Cloudflare</button>
       </div>
     </div>
     <div style="position:relative">
       <pre class="config-code" id="configCode">Click Scan to generate your config...</pre>
-      <button class="copy-btn" onclick="copyConfig()">Copy</button>
+      <button class="copy-btn" id="configCopyBtn">Copy</button>
     </div>
   </div>
 
@@ -142,7 +142,7 @@
         <p class="section-title" style="margin-bottom:0.2rem">30-Day Fix Roadmap</p>
         <p style="color:var(--muted);font-size:0.82rem;margin:0">AI-generated sprint plan to reach an A grade.</p>
       </div>
-      <button class="btn-roadmap" id="roadmapBtn" onclick="loadRoadmap()">Generate Roadmap</button>
+      <button class="btn-roadmap" id="roadmapBtn">Generate Roadmap</button>
     </div>
     <div class="roadmap-text" id="roadmapText"><span class="roadmap-loading">Click "Generate Roadmap" to get a prioritised week-by-week fix plan.</span></div>
   </div>
@@ -161,7 +161,7 @@
           <option value="C">Alert if below C</option>
           <option value="D">Alert if below D</option>
         </select>
-        <button class="btn-monitor" id="monitorBtn" onclick="subscribeMonitor()">Notify Me</button>
+        <button class="btn-monitor" id="monitorBtn">Notify Me</button>
       </div>
       <div id="monitorStatus"></div>
     </div>
@@ -173,7 +173,7 @@
     <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Fail your pipeline automatically if security headers degrade below your chosen grade.</p>
     <div class="cicd-grade-row">
       <label>Minimum passing grade:</label>
-      <select class="grade-select" id="cicdGrade" onchange="renderCicd()">
+      <select class="grade-select" id="cicdGrade">
         <option value="A+">A+</option>
         <option value="A">A</option>
         <option value="B" selected>B</option>
@@ -182,13 +182,13 @@
       </select>
     </div>
     <div class="cicd-tabs">
-      <button class="tab active" onclick="switchCicdTab('gha', this)">GitHub Actions</button>
-      <button class="tab" onclick="switchCicdTab('npm', this)">npm script</button>
-      <button class="tab" onclick="switchCicdTab('shell', this)">Shell</button>
+      <button class="tab active" data-tab="gha">GitHub Actions</button>
+      <button class="tab" data-tab="npm">npm script</button>
+      <button class="tab" data-tab="shell">Shell</button>
     </div>
     <div style="position:relative">
       <pre class="config-code" id="cicdCode"></pre>
-      <button class="copy-btn" onclick="copyCicd()">Copy</button>
+      <button class="copy-btn" id="cicdCopyBtn">Copy</button>
     </div>
   </div>
 
@@ -200,7 +200,7 @@
     </div>
     <div id="shareUrlBox" class="share-url-box"></div>
     <span id="shareCopied" class="share-copied">Copied!</span>
-    <button class="btn-share" onclick="shareReport(this)">Copy Link</button>
+    <button class="btn-share" id="shareBtn">Copy Link</button>
   </div>
 
 </div>

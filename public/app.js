@@ -429,30 +429,30 @@ done`;
 
   function copyCicd() {
     const text = document.getElementById('cicdCode').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = document.querySelector('#cicdSection .copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
+    const btn = document.getElementById('cicdCopyBtn');
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      }).catch(() => {});
+    } catch (_e) {}
   }
 
   function copyConfig() {
     const text = document.getElementById('configCode').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
+    const btn = document.getElementById('configCopyBtn');
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      }).catch(() => {});
+    } catch (_e) {}
   }
 
   function escHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // Allow Enter key to trigger scan
-  document.getElementById('urlInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') runScan();
-  });
 
   // ── Markdown renderer ──────────────────────────────────────────────
   function renderMd(text) {
@@ -878,4 +878,33 @@ done`;
     hide('results');
     document.getElementById('sharedBanner').style.display = 'none';
     loadFromHash();
+
+    // Wire up all buttons (CSP blocks inline onclick, so we use addEventListener)
+    document.getElementById('scanBtn').addEventListener('click', runScan);
+    document.getElementById('subScanBtn').addEventListener('click', runSubScan);
+    document.getElementById('dismissBtn').addEventListener('click', () => {
+      document.getElementById('subscandResults').style.display = 'none';
+    });
+    document.getElementById('rescanBtn').addEventListener('click', newScan);
+    document.getElementById('configCopyBtn').addEventListener('click', copyConfig);
+    document.getElementById('roadmapBtn').addEventListener('click', loadRoadmap);
+    document.getElementById('monitorBtn').addEventListener('click', subscribeMonitor);
+    document.getElementById('cicdCopyBtn').addEventListener('click', copyCicd);
+    document.getElementById('cicdGrade').addEventListener('change', renderCicd);
+    document.getElementById('shareBtn').addEventListener('click', () => shareReport(document.getElementById('shareBtn')));
+
+    document.querySelectorAll('.url-example').forEach(a => {
+      a.addEventListener('click', e => { e.preventDefault(); setUrl(a.dataset.url); });
+    });
+    document.querySelectorAll('#serverTabs .tab').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.server, btn));
+    });
+    document.querySelectorAll('.cicd-tabs .tab').forEach(btn => {
+      btn.addEventListener('click', () => switchCicdTab(btn.dataset.tab, btn));
+    });
+
+    // Allow Enter key to trigger scan
+    document.getElementById('urlInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') runScan();
+    });
   });
