@@ -729,19 +729,30 @@ done`;
     if (!currentScan) return;
     const encoded = encodeReport(currentScan);
     const shareUrl = `${location.origin}${location.pathname}#report/${encoded}`;
+    const btn = document.querySelector('.btn-share');
+
+    // Always show the URL box and update browser URL
+    const box = document.getElementById('shareUrlBox');
+    box.textContent = shareUrl.length > 80 ? shareUrl.slice(0, 77) + '...' : shareUrl;
+    box.style.display = 'block';
+    history.replaceState(null, '', `#report/${encoded}`);
 
     navigator.clipboard.writeText(shareUrl).then(() => {
-      // Show URL preview (truncated)
-      const box = document.getElementById('shareUrlBox');
-      box.textContent = shareUrl.length > 80 ? shareUrl.slice(0, 77) + '...' : shareUrl;
-      box.style.display = 'block';
-
-      const copied = document.getElementById('shareCopied');
-      copied.style.display = 'inline';
-      setTimeout(() => { copied.style.display = 'none'; }, 2500);
-
-      // Update browser URL without reload
-      history.replaceState(null, '', `#report/${encoded}`);
+      // Clipboard succeeded — show "Copied!" on button
+      btn.textContent = 'Copied!';
+      btn.style.background = '#22c55e';
+      setTimeout(() => {
+        btn.textContent = 'Copy Link';
+        btn.style.background = '';
+      }, 2500);
+    }).catch(() => {
+      // Clipboard blocked — prompt user to copy manually
+      btn.textContent = 'Copy manually';
+      box.style.outline = '2px solid #3b82f6';
+      setTimeout(() => {
+        btn.textContent = 'Copy Link';
+        box.style.outline = '';
+      }, 3000);
     });
   }
 
