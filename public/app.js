@@ -856,4 +856,9 @@ done`;
     }
   }
 
-  document.addEventListener('DOMContentLoaded', loadFromHash);
+  document.addEventListener('DOMContentLoaded', () => {
+    hide('subscandResults');
+    hide('results');
+    document.getElementById('sharedBanner').style.display = 'none';
+    loadFromHash();
+  });
