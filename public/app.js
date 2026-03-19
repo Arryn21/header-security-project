@@ -1,8 +1,8 @@
   // Auto-detect: localhost uses n8n, production uses Vercel API routes
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const SCAN_URL = isLocal ? 'http://localhost:5678/webhook/scan-headers' : '/.netlify/functions/scan';
-  const CONFIG_URL = isLocal ? 'http://localhost:5678/webhook/generate-config' : '/.netlify/functions/config';
-  const EXPLAIN_URL = isLocal ? 'http://localhost:5678/webhook/explain-headers' : '/.netlify/functions/explain';
+  const SCAN_URL = isLocal ? 'http://localhost:5678/webhook/scan-headers' : '/api/scan';
+  const CONFIG_URL = isLocal ? 'http://localhost:5678/webhook/generate-config' : '/api/config';
+  const EXPLAIN_URL = isLocal ? 'http://localhost:5678/webhook/explain-headers' : '/api/explain';
   let currentScan = null;
   let currentServer = 'nginx';
 
@@ -292,7 +292,7 @@
     if (!currentScan) return;
     const url = currentScan.url;
     const grade = document.getElementById('cicdGrade').value;
-    const apiUrl = 'https://secureheaders-scanner.netlify.app/.netlify/functions/scan';
+    const apiUrl = '/api/scan';
     const gradeOrder = ['A+', 'A', 'B', 'C', 'D', 'F'];
 
     let code = '';
@@ -498,7 +498,7 @@ done`;
 
   const MONITOR_URL = isLocal
     ? 'http://localhost:5678/webhook/monitor'
-    : '/.netlify/functions/monitor';
+    : '/api/monitor';
 
   async function subscribeMonitor() {
     const email    = document.getElementById('monitorEmail').value.trim();
@@ -619,7 +619,7 @@ done`;
 
   const SUBSCAN_URL = isLocal
     ? 'http://localhost:5678/webhook/subscan'
-    : '/.netlify/functions/subscan';
+    : '/api/subscan';
 
   async function runSubScan() {
     const raw = document.getElementById('urlInput').value.trim();
