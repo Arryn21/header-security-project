@@ -17,7 +17,7 @@ async function checkRateLimit(ip, key, max, windowSeconds, env) {
         headers: { Authorization: `Bearer ${token}` }
       });
     }
-    return count <= max;
+    return count == null || count <= max;
   } catch { return true; }
 }
 
