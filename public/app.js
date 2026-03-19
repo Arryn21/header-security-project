@@ -740,7 +740,6 @@ done`;
     const box = document.getElementById('shareUrlBox');
     box.textContent = shareUrl.length > 80 ? shareUrl.slice(0, 77) + '...' : shareUrl;
     box.style.display = 'block';
-    history.replaceState(null, '', `#report/${encoded}`);
 
     navigator.clipboard.writeText(shareUrl).then(() => {
       // Clipboard succeeded — show "Copied!" on button
