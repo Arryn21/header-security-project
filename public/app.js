@@ -30,8 +30,11 @@
 
     // Reset UI
     hide('results');
+    hide('subscandResults');
+    document.getElementById('sharedBanner').style.display = 'none';
     document.getElementById('errorBox').innerHTML = '';
     document.getElementById('diffBanner').style.display = 'none';
+    if (location.hash) history.replaceState(null, '', location.pathname);
     show('loading');
     document.getElementById('scanBtn').disabled = true;
     document.getElementById('aiText').innerHTML = '<span class="ai-loading">Generating AI analysis...</span>';
