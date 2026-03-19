@@ -726,38 +726,41 @@ done`;
   }
 
   function shareReport() {
+    const btn = document.querySelector('.btn-share');
+
     if (!currentScan) {
-      const btn = document.querySelector('.btn-share');
       btn.textContent = 'Scan first!';
       setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
       return;
     }
+
+    // Immediate feedback — user knows the click registered
+    btn.textContent = 'Copying...';
+
     const encoded = encodeReport(currentScan);
     const shareUrl = `${location.origin}${location.pathname}#report/${encoded}`;
-    const btn = document.querySelector('.btn-share');
 
-    // Always show the URL box and update browser URL
+    // Show the URL box
     const box = document.getElementById('shareUrlBox');
     box.textContent = shareUrl.length > 80 ? shareUrl.slice(0, 77) + '...' : shareUrl;
     box.style.display = 'block';
 
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      // Clipboard succeeded — show "Copied!" on button
+    const onSuccess = () => {
       btn.textContent = 'Copied!';
       btn.style.background = '#22c55e';
-      setTimeout(() => {
-        btn.textContent = 'Copy Link';
-        btn.style.background = '';
-      }, 2500);
-    }).catch(() => {
-      // Clipboard blocked — prompt user to copy manually
+      setTimeout(() => { btn.textContent = 'Copy Link'; btn.style.background = ''; }, 2500);
+    };
+    const onFail = () => {
       btn.textContent = 'Copy manually';
       box.style.outline = '2px solid #3b82f6';
-      setTimeout(() => {
-        btn.textContent = 'Copy Link';
-        box.style.outline = '';
-      }, 3000);
-    });
+      setTimeout(() => { btn.textContent = 'Copy Link'; box.style.outline = ''; }, 3000);
+    };
+
+    try {
+      navigator.clipboard.writeText(shareUrl).then(onSuccess).catch(onFail);
+    } catch (_e) {
+      onFail();
+    }
   }
 
   function newScan() {
