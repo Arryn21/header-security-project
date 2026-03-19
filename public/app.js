@@ -725,8 +725,7 @@ done`;
     } catch { return null; }
   }
 
-  function shareReport() {
-    const btn = document.querySelector('.btn-share');
+  function shareReport(btn) {
 
     if (!currentScan) {
       btn.textContent = 'Scan first!';
