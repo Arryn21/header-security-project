@@ -22,7 +22,7 @@ async function checkRateLimit(ip, key, max, windowSeconds, env) {
       });
     }
     return count == null || count <= max;
-  } catch { return true; }
+  } catch { return false; }
 }
 
 const GRADE_ORDER = ['A+', 'A', 'B', 'C', 'D', 'F'];

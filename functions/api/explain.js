@@ -15,7 +15,7 @@ async function checkRateLimit(ip, key, maxPerMinute, env) {
       });
     }
     return count == null || count <= maxPerMinute;
-  } catch { return true; }
+  } catch { return false; }
 }
 
 async function callClaude(prompt, maxTokens, env) {
