@@ -16,7 +16,8 @@ export async function onRequest(context) {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Vary': 'Origin'
+    'Vary': 'Origin',
+    'X-Content-Type-Options': 'nosniff'
   };
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });

@@ -140,6 +140,18 @@ function alertEmail(sub, newGrade, newScore, changedHeaders, siteUrl) {
     </div>`;
 }
 
+function isAllowedUrl(urlString) {
+  let parsed;
+  try { parsed = new URL(urlString); } catch { return false; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+  const h = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost') return false;
+  if (/^[\d.]+$/.test(h)) return false;
+  if (/^0x[0-9a-f]+$/i.test(h)) return false;
+  if (/^[0-9a-f:]+$/.test(h)) return false;
+  return true;
+}
+
 const WEIGHTS = {
   'content-security-policy': 30, 'strict-transport-security': 20,
   'x-frame-options': 15, 'x-content-type-options': 15,
@@ -147,11 +159,21 @@ const WEIGHTS = {
 };
 
 async function quickScan(url) {
-  const response = await fetch(url, {
-    method: 'GET', redirect: 'follow',
-    signal: AbortSignal.timeout(10000),
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SecureHeaders-Scanner/1.0)' }
-  });
+  let currentUrl = url;
+  let response;
+  for (let hops = 0; hops < 5; hops++) {
+    response = await fetch(currentUrl, {
+      method: 'GET', redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SecureHeaders-Scanner/1.0)' }
+    });
+    if (response.status < 300 || response.status >= 400) break;
+    const location = response.headers.get('location');
+    if (!location) break;
+    const next = new URL(location, currentUrl).href;
+    if (!isAllowedUrl(next)) throw new Error('SSRF_REDIRECT');
+    currentUrl = next;
+  }
   const headers = {};
   response.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
 
@@ -176,7 +198,8 @@ export async function onRequest(context) {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Vary': 'Origin'
+    'Vary': 'Origin',
+    'X-Content-Type-Options': 'nosniff'
   };
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -219,10 +242,13 @@ export async function onRequest(context) {
   // POST subscribe
   if (action === 'subscribe') {
     const { email, url, minGrade = 'B' } = body;
-    if (!email || !url) return new Response(JSON.stringify({ error: 'email and url required' }), { status: 400, headers: cors });
+    if (!email || typeof email !== 'string' || !url || typeof url !== 'string') return new Response(JSON.stringify({ error: 'email and url are required and must be strings' }), { status: 400, headers: cors });
 
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRe.test(email)) return new Response(JSON.stringify({ error: 'Invalid email address' }), { status: 400, headers: cors });
+
+    const normalizedUrl = url.startsWith('http') ? url : 'https://' + url;
+    if (!isAllowedUrl(normalizedUrl)) return new Response(JSON.stringify({ error: 'URL not allowed — private/internal addresses are blocked' }), { status: 400, headers: cors });
 
     const ip = request.headers.get('cf-connecting-ip') || (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
     if (!(await checkRateLimit(ip, 'monitor-sub', 3, 600, env))) {
@@ -230,7 +256,7 @@ export async function onRequest(context) {
     }
 
     try {
-      const scan = await quickScan(url.startsWith('http') ? url : 'https://' + url);
+      const scan = await quickScan(normalizedUrl);
       const secret = env.MONITOR_SECRET || 'default-secret';
       const sub = {
         email, url, minGrade,

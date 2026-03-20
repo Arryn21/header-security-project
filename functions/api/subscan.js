@@ -98,7 +98,8 @@ export async function onRequest(context) {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Vary': 'Origin'
+    'Vary': 'Origin',
+    'X-Content-Type-Options': 'nosniff'
   };
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -112,7 +113,7 @@ export async function onRequest(context) {
   }
 
   const { domain } = await request.json();
-  if (!domain) return new Response(JSON.stringify({ error: 'domain is required' }), { status: 400, headers: cors });
+  if (!domain || typeof domain !== 'string') return new Response(JSON.stringify({ error: 'domain is required and must be a string' }), { status: 400, headers: cors });
 
   const cleanDomain = domain
     .replace(/^https?:\/\//, '')

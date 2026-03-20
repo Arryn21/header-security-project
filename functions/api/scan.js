@@ -222,7 +222,8 @@ export async function onRequest(context) {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Vary': 'Origin'
+    'Vary': 'Origin',
+    'X-Content-Type-Options': 'nosniff'
   };
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -236,7 +237,7 @@ export async function onRequest(context) {
   }
 
   const { url } = await request.json();
-  if (!url) return new Response(JSON.stringify({ error: 'URL is required' }), { status: 400, headers: cors });
+  if (!url || typeof url !== 'string') return new Response(JSON.stringify({ error: 'URL is required and must be a string' }), { status: 400, headers: cors });
   if (url.length > 2048) return new Response(JSON.stringify({ error: 'URL too long' }), { status: 400, headers: cors });
 
   const targetUrl = url.startsWith('http') ? url : 'https://' + url;
