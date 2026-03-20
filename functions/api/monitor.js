@@ -17,7 +17,7 @@ async function checkRateLimit(ip, key, max, windowSeconds, env) {
     });
     const { result: count } = await res.json();
     if (count === 1) {
-      fetch(`${url}/expire/${encodeURIComponent(rlKey)}/${windowSeconds}`, {
+      await fetch(`${url}/expire/${encodeURIComponent(rlKey)}/${windowSeconds}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
     }
