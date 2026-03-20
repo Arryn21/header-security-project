@@ -21,6 +21,8 @@ export async function onRequest(context) {
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: cors });
+  const ct = request.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) return new Response(JSON.stringify({ error: 'Unsupported Media Type' }), { status: 415, headers: cors });
 
   const { server_type, scan_results } = await request.json();
   const serverType = (server_type || 'nginx').toLowerCase();
