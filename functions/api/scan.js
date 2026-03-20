@@ -160,9 +160,9 @@ function analyzeCors(headers) {
 }
 
 async function checkRateLimit(ip, key, maxPerMinute, env) {
-  const url   = env.UPSTASH_REDIS_URL;
+  const url   = (env.UPSTASH_REDIS_URL || '').replace(/\/$/, '');
   const token = env.UPSTASH_REDIS_TOKEN;
-  if (!url || !token) return false;
+  if (!url || !token) return { ok: false, debug: 'missing env vars' };
   const minute = Math.floor(Date.now() / 60000);
   const rlKey  = `rl:${key}:${ip}:${minute}`;
   try {
@@ -171,10 +171,13 @@ async function checkRateLimit(ip, key, maxPerMinute, env) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify([['INCR', rlKey], ['EXPIRE', rlKey, 60]])
     });
-    const data = await res.json();
+    const text = await res.text();
+    if (!res.ok) return { ok: false, debug: `http ${res.status}: ${text.slice(0, 200)}` };
+    const data = JSON.parse(text);
     const count = data[0]?.result;
-    return typeof count === 'number' && count <= maxPerMinute;
-  } catch { return false; }
+    if (typeof count !== 'number') return { ok: false, debug: `unexpected response: ${text.slice(0, 200)}` };
+    return { ok: count <= maxPerMinute };
+  } catch (e) { return { ok: false, debug: e.message }; }
 }
 
 function isAllowedUrl(urlString) {
@@ -230,8 +233,9 @@ export async function onRequest(context) {
   if (!ct.includes('application/json')) return new Response(JSON.stringify({ error: 'Unsupported Media Type' }), { status: 415, headers: cors });
 
   const ip = request.headers.get('cf-connecting-ip') || (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
-  if (!(await checkRateLimit(ip, 'scan', 20, env))) {
-    return new Response(JSON.stringify({ error: 'Rate limit exceeded. Max 20 scan requests per minute per IP.' }), { status: 429, headers: { ...cors, 'Retry-After': '60' } });
+  const rl = await checkRateLimit(ip, 'scan', 20, env);
+  if (!rl.ok) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded. Max 20 scan requests per minute per IP.', _debug: rl.debug }), { status: 429, headers: { ...cors, 'Retry-After': '60' } });
   }
 
   const { url } = await request.json();
