@@ -5,15 +5,13 @@ async function checkRateLimit(ip, key, maxPerMinute, env) {
   const minute = Math.floor(Date.now() / 60000);
   const rlKey  = `rl:${key}:${ip}:${minute}`;
   try {
-    const res = await fetch(`${url}/incr/${encodeURIComponent(rlKey)}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify([['INCR', rlKey], ['EXPIRE', rlKey, 60]])
     });
-    const { result: count } = await res.json();
-    if (count === 1) {
-      await fetch(`${url}/expire/${encodeURIComponent(rlKey)}/60`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    }
+    const data = await res.json();
+    const count = data[0]?.result;
     return typeof count === 'number' && count <= maxPerMinute;
   } catch { return false; }
 }

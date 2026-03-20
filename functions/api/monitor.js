@@ -12,15 +12,13 @@ async function checkRateLimit(ip, key, max, windowSeconds, env) {
   const window = Math.floor(Date.now() / (windowSeconds * 1000));
   const rlKey  = `rl:${key}:${ip}:${window}`;
   try {
-    const res = await fetch(`${url}/incr/${encodeURIComponent(rlKey)}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify([['INCR', rlKey], ['EXPIRE', rlKey, windowSeconds]])
     });
-    const { result: count } = await res.json();
-    if (count === 1) {
-      await fetch(`${url}/expire/${encodeURIComponent(rlKey)}/${windowSeconds}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    }
+    const data = await res.json();
+    const count = data[0]?.result;
     return typeof count === 'number' && count <= max;
   } catch { return false; }
 }
