@@ -72,6 +72,15 @@ async function getAllSubscriptions() {
   return subs;
 }
 
+async function makeUnsubToken(email, url, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${email}:${url}`));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+
 async function sendEmail(to, subject, html, env) {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY not set');
@@ -84,7 +93,7 @@ async function sendEmail(to, subject, html, env) {
 }
 
 function confirmationEmail(sub, siteUrl) {
-  const unsubLink = `${siteUrl}/api/monitor?action=unsubscribe&email=${encodeURIComponent(sub.email)}&url=${encodeURIComponent(sub.url)}`;
+  const unsubLink = `${siteUrl}/api/monitor?action=unsubscribe&token=${encodeURIComponent(sub.unsubToken)}`;
   return `
     <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e2e8f0;border-radius:12px;overflow:hidden;">
       <div style="background:#1a1d27;padding:24px 32px;border-bottom:1px solid #2a2d3e;">
@@ -106,7 +115,7 @@ function confirmationEmail(sub, siteUrl) {
 }
 
 function alertEmail(sub, newGrade, newScore, changedHeaders, siteUrl) {
-  const unsubLink = `${siteUrl}/api/monitor?action=unsubscribe&email=${encodeURIComponent(sub.email)}&url=${encodeURIComponent(sub.url)}`;
+  const unsubLink = `${siteUrl}/api/monitor?action=unsubscribe&token=${encodeURIComponent(sub.unsubToken)}`;
   const changes = changedHeaders.length
     ? `<ul style="color:#8892a4;padding-left:20px;">${changedHeaders.map(h => `<li>${escHtml(h)}</li>`).join('')}</ul>`
     : '';
@@ -180,15 +189,17 @@ export async function onRequest(context) {
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
     const action = params.get('action');
-    const email  = params.get('email');
-    const url    = params.get('url');
-    if (action === 'unsubscribe' && email && url) {
+    const token  = params.get('token');
+    if (action === 'unsubscribe' && token) {
       try {
-        await deleteSubscription(email, url);
+        const subs = await getAllSubscriptions();
+        const sub = subs.find(s => s.unsubToken === token);
+        if (!sub) return new Response('Invalid or expired unsubscribe link.', { status: 400, headers: { 'Content-Type': 'text/plain' } });
+        await deleteSubscription(sub.email, sub.url);
         return new Response(`<html><body style="font-family:system-ui;background:#0f1117;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
           <div style="text-align:center;padding:2rem;">
             <h2 style="color:#22c55e;">Unsubscribed</h2>
-            <p style="color:#8892a4;">You'll no longer receive alerts for ${escHtml(url)}</p>
+            <p style="color:#8892a4;">You'll no longer receive alerts for ${escHtml(sub.url)}</p>
             <a href="${escHtml(siteUrl)}" style="color:#3b82f6;">Back to Scanner</a>
           </div></body></html>`, { status: 200, headers: {
             'Content-Type': 'text/html',
@@ -224,10 +235,12 @@ export async function onRequest(context) {
 
     try {
       const scan = await quickScan(url.startsWith('http') ? url : 'https://' + url);
+      const secret = env.MONITOR_SECRET || 'default-secret';
       const sub = {
         email, url, minGrade,
         lastGrade: scan.grade, lastScore: scan.score, lastPresent: scan.present,
-        createdAt: new Date().toISOString(), lastCheck: new Date().toISOString()
+        createdAt: new Date().toISOString(), lastCheck: new Date().toISOString(),
+        unsubToken: await makeUnsubToken(email, url, secret)
       };
       await saveSubscription(sub);
       await sendEmail(email, `Monitoring activated for ${url}`, confirmationEmail(sub, siteUrl), env);
