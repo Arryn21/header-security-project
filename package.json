@@ -4,5 +4,11 @@
   "description": "Free HTTP security header scanner",
   "engines": {
     "node": "18.x"
+  },
+  "scripts": {
+    "build": "esbuild public/app.js --bundle=false --minify --outfile=public/app.js --allow-overwrite"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }

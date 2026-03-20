@@ -20,7 +20,7 @@
         "method": "GET",
         "url": "={{ $json.body.url }}",
         "options": {
-          "allowUnauthorizedCerts": true,
+          "allowUnauthorizedCerts": false,
           "redirect": {
             "redirect": {
               "followRedirects": true,
