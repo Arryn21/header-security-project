@@ -1,6 +1,10 @@
 // Email monitoring — subscribe/unsubscribe/check
 // Requires env vars: RESEND_API_KEY, UPSTASH_REDIS_URL, UPSTASH_REDIS_TOKEN, MONITOR_SECRET, SITE_URL
 
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+
 async function checkRateLimit(ip, key, max, windowSeconds, env) {
   const url   = env.UPSTASH_REDIS_URL;
   const token = env.UPSTASH_REDIS_TOKEN;
@@ -184,9 +188,13 @@ export async function onRequest(context) {
         return new Response(`<html><body style="font-family:system-ui;background:#0f1117;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
           <div style="text-align:center;padding:2rem;">
             <h2 style="color:#22c55e;">Unsubscribed</h2>
-            <p style="color:#8892a4;">You'll no longer receive alerts for ${url}</p>
-            <a href="${siteUrl}" style="color:#3b82f6;">Back to Scanner</a>
-          </div></body></html>`, { status: 200, headers: { 'Content-Type': 'text/html' } });
+            <p style="color:#8892a4;">You'll no longer receive alerts for ${escHtml(url)}</p>
+            <a href="${escHtml(siteUrl)}" style="color:#3b82f6;">Back to Scanner</a>
+          </div></body></html>`, { status: 200, headers: {
+            'Content-Type': 'text/html',
+            'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+            'X-Content-Type-Options': 'nosniff'
+          }});
       } catch (e) {
         return new Response(JSON.stringify({ error: 'Unsubscribe failed. Please try again.' }), { status: 500, headers: cors });
       }
