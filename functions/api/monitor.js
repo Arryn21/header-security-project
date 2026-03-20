@@ -93,7 +93,7 @@ function confirmationEmail(sub, siteUrl) {
       <div style="padding:32px;">
         <h3 style="color:#22c55e;margin-top:0;">Monitoring activated!</h3>
         <p style="color:#8892a4;">You're now subscribed to weekly security alerts for:</p>
-        <div style="background:#0a0c14;border:1px solid #2a2d3e;border-radius:8px;padding:12px 16px;font-family:monospace;color:#3b82f6;margin:16px 0;">${sub.url}</div>
+        <div style="background:#0a0c14;border:1px solid #2a2d3e;border-radius:8px;padding:12px 16px;font-family:monospace;color:#3b82f6;margin:16px 0;">${escHtml(sub.url)}</div>
         <p style="color:#8892a4;">You'll get an email if the security grade drops below <strong style="color:#fff;">${sub.minGrade}</strong>.</p>
         <p style="color:#8892a4;">Current grade: <strong style="color:#fff;">${sub.lastGrade} (${sub.lastScore}/100)</strong></p>
         <hr style="border-color:#2a2d3e;margin:24px 0;">
@@ -108,7 +108,7 @@ function confirmationEmail(sub, siteUrl) {
 function alertEmail(sub, newGrade, newScore, changedHeaders, siteUrl) {
   const unsubLink = `${siteUrl}/api/monitor?action=unsubscribe&email=${encodeURIComponent(sub.email)}&url=${encodeURIComponent(sub.url)}`;
   const changes = changedHeaders.length
-    ? `<ul style="color:#8892a4;padding-left:20px;">${changedHeaders.map(h => `<li>${h}</li>`).join('')}</ul>`
+    ? `<ul style="color:#8892a4;padding-left:20px;">${changedHeaders.map(h => `<li>${escHtml(h)}</li>`).join('')}</ul>`
     : '';
   return `
     <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;background:#0f1117;color:#e2e8f0;border-radius:12px;overflow:hidden;">
@@ -116,7 +116,7 @@ function alertEmail(sub, newGrade, newScore, changedHeaders, siteUrl) {
         <h2 style="margin:0;color:#fff;">Security Grade Alert</h2>
       </div>
       <div style="padding:32px;">
-        <p style="color:#8892a4;margin-top:0;">The security grade for <strong style="color:#fff;">${sub.url}</strong> has dropped:</p>
+        <p style="color:#8892a4;margin-top:0;">The security grade for <strong style="color:#fff;">${escHtml(sub.url)}</strong> has dropped:</p>
         <div style="display:flex;align-items:center;gap:16px;font-size:2.5rem;font-weight:800;margin:24px 0;">
           <span style="color:#22c55e;">${sub.lastGrade}</span>
           <span style="color:#8892a4;font-size:1.2rem;">→</span>
