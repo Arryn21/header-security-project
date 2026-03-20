@@ -6,7 +6,7 @@ function escHtml(s) {
 }
 
 async function checkRateLimit(ip, key, max, windowSeconds, env) {
-  const url   = env.UPSTASH_REDIS_URL;
+  const url   = (env.UPSTASH_REDIS_URL || '').replace(/\/$/, '');
   const token = env.UPSTASH_REDIS_TOKEN;
   if (!url || !token) return false;
   const window = Math.floor(Date.now() / (windowSeconds * 1000));
@@ -28,7 +28,7 @@ function gradeIndex(g) { return GRADE_ORDER.indexOf(g); }
 function gradeWorse(a, b) { return gradeIndex(a) > gradeIndex(b); }
 
 async function redis(env, cmd, ...args) {
-  const url   = env.UPSTASH_REDIS_URL;
+  const url   = (env.UPSTASH_REDIS_URL || '').replace(/\/$/, '');
   const token = env.UPSTASH_REDIS_TOKEN;
   if (!url || !token) throw new Error('Upstash env vars not set');
   const res = await fetch(`${url}/${[cmd, ...args].map(encodeURIComponent).join('/')}`, {

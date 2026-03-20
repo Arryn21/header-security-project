@@ -56,7 +56,7 @@ async function quickScan(url) {
 }
 
 async function checkRateLimit(ip, key, maxPerMinute, env) {
-  const url   = env.UPSTASH_REDIS_URL;
+  const url   = (env.UPSTASH_REDIS_URL || '').replace(/\/$/, '');
   const token = env.UPSTASH_REDIS_TOKEN;
   if (!url || !token) return false;
   const minute = Math.floor(Date.now() / 60000);
