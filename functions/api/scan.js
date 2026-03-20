@@ -162,7 +162,7 @@ function analyzeCors(headers) {
 async function checkRateLimit(ip, key, maxPerMinute, env) {
   const url   = env.UPSTASH_REDIS_URL;
   const token = env.UPSTASH_REDIS_TOKEN;
-  if (!url || !token) return true;
+  if (!url || !token) return false;
   const minute = Math.floor(Date.now() / 60000);
   const rlKey  = `rl:${key}:${ip}:${minute}`;
   try {
@@ -179,11 +179,31 @@ async function checkRateLimit(ip, key, maxPerMinute, env) {
   } catch { return true; }
 }
 
+function isAllowedUrl(urlString) {
+  let parsed;
+  try { parsed = new URL(urlString); } catch { return false; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+  const h = parsed.hostname.toLowerCase();
+  const blocked = [
+    /^localhost$/,
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^192\.168\./,
+    /^169\.254\./,
+    /^::1$/,
+    /^0\.0\.0\.0$/,
+    /^fc00:/,
+    /^fe80:/,
+  ];
+  return !blocked.some(re => re.test(h));
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
-  const allowedOrigin = env.ALLOWED_ORIGIN || '*';
+  const allowedOrigin = env.SITE_URL || 'https://header-security-project.pages.dev';
   const origin = request.headers.get('origin') || '';
-  const corsOrigin = allowedOrigin === '*' ? '*' : (origin === allowedOrigin ? origin : allowedOrigin);
+  const corsOrigin = origin === allowedOrigin ? origin : allowedOrigin;
   const cors = {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -201,6 +221,7 @@ export async function onRequest(context) {
 
   const { url } = await request.json();
   if (!url) return new Response(JSON.stringify({ error: 'URL is required' }), { status: 400, headers: cors });
+  if (url.length > 2048) return new Response(JSON.stringify({ error: 'URL too long' }), { status: 400, headers: cors });
 
   const targetUrl = url.startsWith('http') ? url : 'https://' + url;
   try {
@@ -210,6 +231,9 @@ export async function onRequest(context) {
     }
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid URL format' }), { status: 400, headers: cors });
+  }
+  if (!isAllowedUrl(targetUrl)) {
+    return new Response(JSON.stringify({ error: 'URL not allowed — private/internal addresses are blocked' }), { status: 400, headers: cors });
   }
 
   try {

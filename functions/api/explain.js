@@ -1,7 +1,7 @@
 async function checkRateLimit(ip, key, maxPerMinute, env) {
   const url   = env.UPSTASH_REDIS_URL;
   const token = env.UPSTASH_REDIS_TOKEN;
-  if (!url || !token) return true;
+  if (!url || !token) return false;
   const minute = Math.floor(Date.now() / 60000);
   const rlKey  = `rl:${key}:${ip}:${minute}`;
   try {

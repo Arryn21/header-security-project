@@ -8,7 +8,7 @@ function escHtml(s) {
 async function checkRateLimit(ip, key, max, windowSeconds, env) {
   const url   = env.UPSTASH_REDIS_URL;
   const token = env.UPSTASH_REDIS_TOKEN;
-  if (!url || !token) return true;
+  if (!url || !token) return false;
   const window = Math.floor(Date.now() / (windowSeconds * 1000));
   const rlKey  = `rl:${key}:${ip}:${window}`;
   try {
