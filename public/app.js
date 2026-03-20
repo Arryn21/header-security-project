@@ -530,9 +530,7 @@ done`;
 
   // ── Email Monitoring ──────────────────────────────────────────────
 
-  const MONITOR_URL = isLocal
-    ? 'http://localhost:5678/webhook/monitor'
-    : '/api/monitor';
+  const MONITOR_URL = '/api/monitor';
 
   async function subscribeMonitor() {
     const email    = document.getElementById('monitorEmail').value.trim();
@@ -651,9 +649,7 @@ done`;
 
   // ── Subdomain Scanner ─────────────────────────────────────────────
 
-  const SUBSCAN_URL = isLocal
-    ? 'http://localhost:5678/webhook/subscan'
-    : '/api/subscan';
+  const SUBSCAN_URL = '/api/subscan';
 
   async function runSubScan() {
     const raw = document.getElementById('urlInput').value.trim();
