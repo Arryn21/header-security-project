@@ -1,8 +1,6 @@
-  // Auto-detect: localhost uses n8n, production uses Vercel API routes
-  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const SCAN_URL = isLocal ? 'http://localhost:5678/webhook/scan-headers' : '/api/scan';
-  const CONFIG_URL = isLocal ? 'http://localhost:5678/webhook/generate-config' : '/api/config';
-  const EXPLAIN_URL = isLocal ? 'http://localhost:5678/webhook/explain-headers' : '/api/explain';
+  const SCAN_URL = '/api/scan';
+  const CONFIG_URL = '/api/config';
+  const EXPLAIN_URL = '/api/explain';
   let currentScan = null;
   let currentServer = 'nginx';
 

@@ -1,0 +1,4 @@
+Contact: mailto:tharuvishal21@gmail.com
+Expires: 2027-03-20T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://header-security-project.pages.dev/.well-known/security.txt

@@ -160,9 +160,9 @@ export async function onRequest(context) {
   env_global = env;
 
   const siteUrl = env.SITE_URL || 'https://secureheaders-scanner.pages.dev';
-  const allowedOrigin = env.ALLOWED_ORIGIN || '*';
+  const allowedOrigin = env.SITE_URL || 'https://header-security-project.pages.dev';
   const origin = request.headers.get('origin') || '';
-  const corsOrigin = allowedOrigin === '*' ? '*' : (origin === allowedOrigin ? origin : allowedOrigin);
+  const corsOrigin = origin === allowedOrigin ? origin : allowedOrigin;
   const cors = {
     'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
