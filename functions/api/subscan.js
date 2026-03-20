@@ -17,11 +17,21 @@ function computeGrade(score) {
 
 async function quickScan(url) {
   try {
-    const response = await fetch(url, {
-      method: 'GET', redirect: 'follow',
-      signal: AbortSignal.timeout(6000),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SecureHeaders-Scanner/1.0)' }
-    });
+    let currentUrl = url;
+    let response;
+    for (let hops = 0; hops < 5; hops++) {
+      response = await fetch(currentUrl, {
+        method: 'GET', redirect: 'manual',
+        signal: AbortSignal.timeout(6000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SecureHeaders-Scanner/1.0)' }
+      });
+      if (response.status < 300 || response.status >= 400) break;
+      const location = response.headers.get('location');
+      if (!location) break;
+      const next = new URL(location, currentUrl).href;
+      if (!isAllowedUrl(next)) return { reachable: false };
+      currentUrl = next;
+    }
 
     const headers = {};
     response.headers.forEach((value, key) => { headers[key.toLowerCase()] = value; });
@@ -69,20 +79,14 @@ function isAllowedUrl(urlString) {
   let parsed;
   try { parsed = new URL(urlString); } catch { return false; }
   if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-  const h = parsed.hostname.toLowerCase();
-  const blocked = [
-    /^localhost$/,
-    /^127\./,
-    /^10\./,
-    /^172\.(1[6-9]|2\d|3[01])\./,
-    /^192\.168\./,
-    /^169\.254\./,
-    /^::1$/,
-    /^0\.0\.0\.0$/,
-    /^fc00:/,
-    /^fe80:/,
-  ];
-  return !blocked.some(re => re.test(h));
+  const h = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+
+  if (h === 'localhost') return false;
+  if (/^[\d.]+$/.test(h)) return false;
+  if (/^0x[0-9a-f]+$/i.test(h)) return false;
+  if (/^[0-9a-f:]+$/.test(h)) return false;
+
+  return true;
 }
 
 export async function onRequest(context) {

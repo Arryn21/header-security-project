@@ -183,20 +183,34 @@ function isAllowedUrl(urlString) {
   let parsed;
   try { parsed = new URL(urlString); } catch { return false; }
   if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-  const h = parsed.hostname.toLowerCase();
-  const blocked = [
-    /^localhost$/,
-    /^127\./,
-    /^10\./,
-    /^172\.(1[6-9]|2\d|3[01])\./,
-    /^192\.168\./,
-    /^169\.254\./,
-    /^::1$/,
-    /^0\.0\.0\.0$/,
-    /^fc00:/,
-    /^fe80:/,
-  ];
-  return !blocked.some(re => re.test(h));
+  const h = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+
+  // Block localhost and any bare IP address (dotted, decimal, hex, octal, IPv6)
+  // Forcing domain names eliminates all encoding bypass techniques in one rule
+  if (h === 'localhost') return false;
+  if (/^[\d.]+$/.test(h)) return false;     // dotted IPv4 or decimal IP
+  if (/^0x[0-9a-f]+$/i.test(h)) return false; // hex IP (0x7f000001)
+  if (/^[0-9a-f:]+$/.test(h)) return false;   // IPv6 (bare or with colons)
+
+  return true;
+}
+
+async function safeFetch(url, timeoutMs) {
+  let currentUrl = url;
+  for (let hops = 0; hops < 5; hops++) {
+    const res = await fetch(currentUrl, {
+      method: 'GET', redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SecureHeaders-Scanner/1.0)' }
+    });
+    if (res.status < 300 || res.status >= 400) return res;
+    const location = res.headers.get('location');
+    if (!location) return res;
+    const next = new URL(location, currentUrl).href;
+    if (!isAllowedUrl(next)) throw new Error('SSRF_REDIRECT');
+    currentUrl = next;
+  }
+  throw new Error('Too many redirects');
 }
 
 export async function onRequest(context) {
@@ -237,11 +251,7 @@ export async function onRequest(context) {
   }
 
   try {
-    const response = await fetch(targetUrl, {
-      method: 'GET', redirect: 'follow',
-      signal: AbortSignal.timeout(10000),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SecureHeaders-Scanner/1.0)' }
-    });
+    const response = await safeFetch(targetUrl, 10000);
 
     const headers = {};
     response.headers.forEach((value, key) => { headers[key.toLowerCase()] = value; });
@@ -318,6 +328,9 @@ export async function onRequest(context) {
     return new Response(JSON.stringify(result), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
 
   } catch (err) {
+    if (err.message === 'SSRF_REDIRECT') {
+      return new Response(JSON.stringify({ error: 'URL not allowed — redirect to private/internal address blocked' }), { status: 400, headers: cors });
+    }
     const result = {
       url: targetUrl, error: true,
       errorMessage: `Could not connect to ${targetUrl}. The site may be unreachable, blocking automated requests, or the URL may be invalid.`,
