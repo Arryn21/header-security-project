@@ -29,9 +29,9 @@ const GRADE_ORDER = ['A+', 'A', 'B', 'C', 'D', 'F'];
 function gradeIndex(g) { return GRADE_ORDER.indexOf(g); }
 function gradeWorse(a, b) { return gradeIndex(a) > gradeIndex(b); }
 
-async function redis(cmd, ...args) {
-  const url   = env_global.UPSTASH_REDIS_URL;
-  const token = env_global.UPSTASH_REDIS_TOKEN;
+async function redis(env, cmd, ...args) {
+  const url   = env.UPSTASH_REDIS_URL;
+  const token = env.UPSTASH_REDIS_TOKEN;
   if (!url || !token) throw new Error('Upstash env vars not set');
   const res = await fetch(`${url}/${[cmd, ...args].map(encodeURIComponent).join('/')}`, {
     headers: { Authorization: `Bearer ${token}` }
@@ -40,33 +40,30 @@ async function redis(cmd, ...args) {
   return data.result;
 }
 
-// env_global is set per-request in the handler
-let env_global = {};
-
-async function getSubscription(email, url) {
+async function getSubscription(email, url, env) {
   const key = `sub:${email}:${btoa(url)}`;
-  const raw = await redis('GET', key);
+  const raw = await redis(env, 'GET', key);
   return raw ? JSON.parse(raw) : null;
 }
 
-async function saveSubscription(sub) {
+async function saveSubscription(sub, env) {
   const key = `sub:${sub.email}:${btoa(sub.url)}`;
-  await redis('SET', key, JSON.stringify(sub));
-  await redis('SADD', 'all_subs', key);
+  await redis(env, 'SET', key, JSON.stringify(sub));
+  await redis(env, 'SADD', 'all_subs', key);
 }
 
-async function deleteSubscription(email, url) {
+async function deleteSubscription(email, url, env) {
   const key = `sub:${email}:${btoa(url)}`;
-  await redis('DEL', key);
-  await redis('SREM', 'all_subs', key);
+  await redis(env, 'DEL', key);
+  await redis(env, 'SREM', 'all_subs', key);
 }
 
-async function getAllSubscriptions() {
-  const keys = await redis('SMEMBERS', 'all_subs');
+async function getAllSubscriptions(env) {
+  const keys = await redis(env, 'SMEMBERS', 'all_subs');
   if (!keys || !keys.length) return [];
   const subs = [];
   for (const key of keys) {
-    const raw = await redis('GET', key);
+    const raw = await redis(env, 'GET', key);
     if (raw) subs.push(JSON.parse(raw));
   }
   return subs;
@@ -170,7 +167,6 @@ async function quickScan(url) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  env_global = env;
 
   const siteUrl = env.SITE_URL || 'https://secureheaders-scanner.pages.dev';
   const allowedOrigin = env.SITE_URL || 'https://header-security-project.pages.dev';
@@ -192,10 +188,10 @@ export async function onRequest(context) {
     const token  = params.get('token');
     if (action === 'unsubscribe' && token) {
       try {
-        const subs = await getAllSubscriptions();
+        const subs = await getAllSubscriptions(env);
         const sub = subs.find(s => s.unsubToken === token);
         if (!sub) return new Response('Invalid or expired unsubscribe link.', { status: 400, headers: { 'Content-Type': 'text/plain' } });
-        await deleteSubscription(sub.email, sub.url);
+        await deleteSubscription(sub.email, sub.url, env);
         return new Response(`<html><body style="font-family:system-ui;background:#0f1117;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
           <div style="text-align:center;padding:2rem;">
             <h2 style="color:#22c55e;">Unsubscribed</h2>
@@ -242,7 +238,7 @@ export async function onRequest(context) {
         createdAt: new Date().toISOString(), lastCheck: new Date().toISOString(),
         unsubToken: await makeUnsubToken(email, url, secret)
       };
-      await saveSubscription(sub);
+      await saveSubscription(sub, env);
       await sendEmail(email, `Monitoring activated for ${url}`, confirmationEmail(sub, siteUrl), env);
       return new Response(JSON.stringify({ ok: true, grade: scan.grade, score: scan.score }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
     } catch (e) {
@@ -257,7 +253,7 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors });
 
     try {
-      const subs = await getAllSubscriptions();
+      const subs = await getAllSubscriptions(env);
       const results = [];
 
       for (const sub of subs) {
@@ -285,7 +281,7 @@ export async function onRequest(context) {
           sub.lastScore = scan.score;
           sub.lastPresent = scan.present;
           sub.lastCheck = new Date().toISOString();
-          await saveSubscription(sub);
+          await saveSubscription(sub, env);
         } catch (e) {
           results.push({ url: sub.url, status: 'error', error: e.message });
         }
